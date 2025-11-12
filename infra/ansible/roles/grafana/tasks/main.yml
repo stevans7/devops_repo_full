@@ -1,0 +1,40 @@
+---
+- name: Add Grafana repo
+  copy:
+    dest: /etc/yum.repos.d/grafana.repo
+    content: |
+      [grafana]
+      name=Grafana OSS
+      baseurl=https://packages.grafana.com/oss/rpm
+      repo_gpgcheck=1
+      enabled=1
+      gpgcheck=1
+      gpgkey=https://packages.grafana.com/gpg.key
+      sslverify=1
+      sslcacert=/etc/pki/tls/certs/ca-bundle.crt
+
+- name: Install Grafana
+  package: { name: grafana, state: present }
+
+- name: Configure grafana.ini
+  template: { src: templates/grafana.ini.j2, dest: /etc/grafana/grafana.ini }
+  register: grafana_cfg
+
+- name: Provision datasource
+  copy: { src: files/provisioning/datasources/prometheus.yml, dest: /etc/grafana/provisioning/datasources/prometheus.yml }
+
+- name: Provision dashboards
+  copy: { src: files/provisioning/dashboards/dashboard.yml, dest: /etc/grafana/provisioning/dashboards/dashboard.yml }
+
+- name: Ensure dashboards json dir
+  file: { path: /etc/grafana/provisioning/dashboards/json, state: directory }
+
+- name: Install basic dashboard
+  copy: { src: files/provisioning/dashboards/json/basic.json, dest: /etc/grafana/provisioning/dashboards/json/basic.json }
+
+- name: Enable and start grafana
+  service: { name: grafana-server, state: started, enabled: yes }
+
+- name: Restart grafana if config changed
+  service: { name: grafana-server, state: restarted }
+  when: grafana_cfg is changed

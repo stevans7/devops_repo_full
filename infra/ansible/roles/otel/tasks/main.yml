@@ -1,0 +1,7 @@
+---
+- name: Install AWS OTel Collector
+  package: { name: aws-otel-collector, state: present }
+- name: Deploy config
+  copy: { src: ../../files/otel-config.yaml, dest: /etc/aws-otel-collector/config.yaml }
+- name: Ensure running
+  service: { name: aws-otel-collector, state: started, enabled: yes }

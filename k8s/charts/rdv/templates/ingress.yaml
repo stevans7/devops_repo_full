@@ -1,0 +1,11 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata: { name: backend }
+spec:
+  rules:
+    - host: staging.example.com
+      http:
+        paths:
+          - path: /api/
+            pathType: Prefix
+            backend: { service: { name: backend, port: { number: 3000 } } }

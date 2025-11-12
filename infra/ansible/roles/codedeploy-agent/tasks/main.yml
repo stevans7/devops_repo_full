@@ -1,0 +1,11 @@
+---
+- name: Install prerequisites
+  package: { name: ['ruby','wget','curl','awscli'], state: present }
+- name: Install CodeDeploy agent
+  shell: |
+    cd /tmp
+    curl -O https://aws-codedeploy-{{ region | default('eu-west-3') }}.s3.{{ region | default('eu-west-3') }}.amazonaws.com/latest/install
+    chmod +x ./install
+    ./install auto
+- name: Ensure codedeploy-agent
+  service: { name: codedeploy-agent, state: started, enabled: yes }

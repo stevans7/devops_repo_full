@@ -1,0 +1,35 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: default
+  group_by: [alertname, instance_ip]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 2h
+
+receivers:
+  - name: default
+{% if alertmanager_slack_webhook_url is defined and alertmanager_slack_webhook_url|length > 0 %}
+    slack_configs:
+      - send_resolved: true
+        api_url: "{{ alertmanager_slack_webhook_url }}"
+        channel: "{{ alertmanager_slack_channel | default('#alerts') }}"
+        title: "{{ '{{' }} .CommonAnnotations.summary {{ '}}' }}"
+        text: "{{ '{{' }} range .Alerts {{ '}}' }}*{{ '{{' }} .Labels.severity {{ '}}' }}* {{ '{{' }} .Annotations.description {{ '}}' }} on {{ '{{' }} .Labels.instance_ip {{ '}}' }}\n{{ '{{' }} end {{ '}}' }}"
+{% endif %}
+{% if alertmanager_email_smtp_host is defined and alertmanager_email_smtp_host|length > 0 %}
+    email_configs:
+      - to: "{{ alertmanager_email_to }}"
+        from: "{{ alertmanager_email_from }}"
+        smarthost: "{{ alertmanager_email_smtp_host }}:{{ alertmanager_email_smtp_port | default(587) }}"
+        auth_username: "{{ alertmanager_email_username | default('') }}"
+        auth_password: "{{ alertmanager_email_password | default('') }}"
+        require_tls: true
+        send_resolved: true
+{% endif %}
+
+inhibit_rules:
+  - source_matchers: [ severity="critical" ]
+    target_matchers: [ severity="warning" ]
+    equal: [ alertname, instance_ip ]

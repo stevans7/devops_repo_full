@@ -1,0 +1,10 @@
+version: 0.0
+os: linux
+files:
+  - source: /
+    destination: /srv/backend
+hooks:
+  AfterInstall:
+    - location: codedeploy/restart.sh
+      timeout: 60
+      runas: root

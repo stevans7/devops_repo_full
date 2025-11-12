@@ -1,0 +1,30 @@
+name: Build
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ 'v*.*.*' ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions: { id-token: write, contents: read }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '18' }
+      - name: Build frontend (static)
+        run: mkdir -p dist && cp -r public/* dist/
+        working-directory: frontend
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
+      - name: Build & push backend image
+        run: |
+          IMAGE="${{ secrets.AWS_ACCOUNT }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.PROJECT }}-backend:$(git rev-parse --short HEAD)"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+        working-directory: backend
+      - name: Upload front artefacts
+        run: aws s3 sync frontend/dist s3://${{ secrets.PROJECT }}-artifacts/front/${{ github.sha }}/

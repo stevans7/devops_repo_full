@@ -1,0 +1,4 @@
+
+# Secrets
+*.pem
+backend/.env

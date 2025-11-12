@@ -1,0 +1,1 @@
+const mongoose=require('mongoose');module.exports=mongoose.model('Appointment', new mongoose.Schema({nom:String,prenom:String,email:String,tel:String,motif:String,date:Date},{timestamps:true}));
