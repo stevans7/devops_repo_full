@@ -3,6 +3,7 @@ resource "aws_iam_role" "ec2_role" {
   name = "${var.project}-ec2-role"
   assume_role_policy = jsonencode({Version="2012-10-17",Statement=[{Effect="Allow",Principal={Service="ec2.amazonaws.com"},Action="sts:AssumeRole"}]})
 }
+<<<<<<< HEAD
 resource "aws_iam_role_policy_attachment" "ec2_ssm" {
   role       = aws_iam_role.ec2_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
@@ -22,6 +23,12 @@ resource "aws_iam_role_policy_attachment" "ec2_ecr" {
   role       = aws_iam_role.ec2_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
+=======
+resource "aws_iam_role_policy_attachment" "ec2_ssm" { role = aws_iam_role.ec2_role.name policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore" }
+resource "aws_iam_role_policy_attachment" "ec2_cw"  { role = aws_iam_role.ec2_role.name policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy" }
+resource "aws_iam_role_policy_attachment" "ec2_s3"  { role = aws_iam_role.ec2_role.name policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess" }
+resource "aws_iam_role_policy_attachment" "ec2_ecr" { role = aws_iam_role.ec2_role.name policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly" }
+>>>>>>> eca1baaa5cdec3a3cd1a54758194940fdd81d46d
 resource "aws_iam_instance_profile" "ec2_profile" { name = "${var.project}-ec2-profile" role = aws_iam_role.ec2_role.name }
 
 ########################
@@ -31,6 +38,7 @@ resource "aws_security_group" "alb" {
   name        = "${var.project}-alb-sg"
   description = "ALB security group"
   vpc_id      = module.vpc.vpc_id
+<<<<<<< HEAD
   ingress {
     from_port   = 80
     to_port     = 80
@@ -49,12 +57,18 @@ resource "aws_security_group" "alb" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+=======
+  ingress { from_port=80  to_port=80  protocol="tcp" cidr_blocks=["0.0.0.0/0"] }
+  ingress { from_port=443 to_port=443 protocol="tcp" cidr_blocks=["0.0.0.0/0"] }
+  egress  { from_port=0   to_port=0   protocol="-1"  cidr_blocks=["0.0.0.0/0"] }
+>>>>>>> eca1baaa5cdec3a3cd1a54758194940fdd81d46d
 }
 
 resource "aws_security_group" "front" {
   name        = "${var.project}-front-sg"
   description = "Front instances"
   vpc_id      = module.vpc.vpc_id
+<<<<<<< HEAD
   ingress {
     from_port       = 80
     to_port         = 80
@@ -74,12 +88,19 @@ resource "aws_security_group" "front" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+=======
+  ingress { from_port=80  to_port=80  protocol="tcp" security_groups=[aws_security_group.alb.id] }
+  # Node exporter metrics from monitoring host
+  ingress { from_port=9100 to_port=9100 protocol="tcp" security_groups=[aws_security_group.monitoring.id] }
+  egress  { from_port=0   to_port=0   protocol="-1"  cidr_blocks=["0.0.0.0/0"] }
+>>>>>>> eca1baaa5cdec3a3cd1a54758194940fdd81d46d
 }
 
 resource "aws_security_group" "back" {
   name        = "${var.project}-back-sg"
   description = "Back instances"
   vpc_id      = module.vpc.vpc_id
+<<<<<<< HEAD
   ingress {
     from_port       = 3000
     to_port         = 3000
@@ -99,12 +120,19 @@ resource "aws_security_group" "back" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+=======
+  ingress { from_port=3000 to_port=3000 protocol="tcp" security_groups=[aws_security_group.alb.id] }
+  # Node exporter metrics from monitoring host
+  ingress { from_port=9100 to_port=9100 protocol="tcp" security_groups=[aws_security_group.monitoring.id] }
+  egress  { from_port=0   to_port=0   protocol="-1"  cidr_blocks=["0.0.0.0/0"] }
+>>>>>>> eca1baaa5cdec3a3cd1a54758194940fdd81d46d
 }
 
 resource "aws_security_group" "db" {
   name        = "${var.project}-db-sg"
   description = "MongoDB instance"
   vpc_id      = module.vpc.vpc_id
+<<<<<<< HEAD
   ingress {
     from_port       = 27017
     to_port         = 27017
@@ -124,6 +152,12 @@ resource "aws_security_group" "db" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+=======
+  ingress { from_port=27017 to_port=27017 protocol="tcp" security_groups=[aws_security_group.back.id] }
+   # Node exporter metrics from monitoring host
+  ingress { from_port=9100 to_port=9100 protocol="tcp" security_groups=[aws_security_group.monitoring.id] }
+  egress  { from_port=0   to_port=0   protocol="-1"  cidr_blocks=["0.0.0.0/0"] }
+>>>>>>> eca1baaa5cdec3a3cd1a54758194940fdd81d46d
 }
 
 resource "aws_security_group" "monitoring" {
@@ -131,6 +165,7 @@ resource "aws_security_group" "monitoring" {
   description = "Monitoring"
   vpc_id      = module.vpc.vpc_id
   # Allow Prometheus UI (9090) and Grafana (3000) internally if needed
+<<<<<<< HEAD
   ingress {
     from_port   = 9090
     to_port     = 9090
@@ -163,6 +198,15 @@ resource "aws_security_group" "monitoring" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+=======
+  ingress { from_port=9090 to_port=9090 protocol="tcp" cidr_blocks=[var.vpc_cidr] }
+  ingress { from_port=3000 to_port=3000 protocol="tcp" security_groups=[aws_security_group.alb.id] }
+  # Node exporter on self
+  ingress { from_port=9100 to_port=9100 protocol="tcp" self = true }
+  # Alertmanager UI/API
+  ingress { from_port=9093 to_port=9093 protocol="tcp" cidr_blocks=[var.vpc_cidr] }
+  egress  { from_port=0   to_port=0   protocol="-1"  cidr_blocks=["0.0.0.0/0"] }
+>>>>>>> eca1baaa5cdec3a3cd1a54758194940fdd81d46d
 }
 
 ########################
@@ -178,9 +222,13 @@ resource "aws_instance" "monitoring" {
   associate_public_ip_address = false
   user_data                   = file("${path.module}/userdata/monitor.sh")
   tags = { Name = "${var.project}-monitoring", Project = var.project, Tier = "monitoring" }
+<<<<<<< HEAD
   root_block_device {
     volume_size = 20
   }
+=======
+  root_block_device { volume_size = 20 }
+>>>>>>> eca1baaa5cdec3a3cd1a54758194940fdd81d46d
 }
 
 # Register monitoring instance to Grafana target group
@@ -209,6 +257,7 @@ resource "aws_iam_role_policy" "ec2_read" {
 ########################
 # Database (MongoDB)
 ########################
+<<<<<<< HEAD
 data "aws_ami" "al2023" {
   most_recent = true
   owners      = ["137112412989"]
@@ -218,6 +267,9 @@ data "aws_ami" "al2023" {
     values = ["al2023-ami-*-x86_64"]
   }
 }
+=======
+data "aws_ami" "al2023" { most_recent=true owners=["137112412989"] filter{ name="name" values=["al2023-ami-*-x86_64"] } }
+>>>>>>> eca1baaa5cdec3a3cd1a54758194940fdd81d46d
 
 resource "aws_instance" "db" {
   ami                         = data.aws_ami.al2023.id
@@ -229,9 +281,13 @@ resource "aws_instance" "db" {
   associate_public_ip_address = false
   user_data                   = file("${path.module}/userdata/mongo.sh")
   tags = { Name = "${var.project}-db", Project = var.project, Tier = "db" }
+<<<<<<< HEAD
   root_block_device {
     volume_size = 20
   }
+=======
+  root_block_device { volume_size = 20 }
+>>>>>>> eca1baaa5cdec3a3cd1a54758194940fdd81d46d
 }
 
 module "asg_front" {
@@ -265,17 +321,25 @@ resource "aws_iam_role" "codedeploy_role" {
 }
 resource "aws_iam_role_policy_attachment" "codedeploy_managed" { role = aws_iam_role.codedeploy_role.name policy_arn = "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole" }
 
+<<<<<<< HEAD
 resource "aws_codedeploy_app" "backend" {
   name             = "${var.project}-backend"
   compute_platform = "Server"
 }
+=======
+resource "aws_codedeploy_app" "backend" { name = "${var.project}-backend" compute_platform = "Server" }
+>>>>>>> eca1baaa5cdec3a3cd1a54758194940fdd81d46d
 resource "aws_codedeploy_deployment_group" "backend_dg" {
   app_name              = aws_codedeploy_app.backend.name
   deployment_group_name = "${var.project}-backend-dg"
   service_role_arn      = aws_iam_role.codedeploy_role.arn
   autoscaling_groups    = [ module.asg_back.this_asg_name ]
+<<<<<<< HEAD
   deployment_style {
     deployment_option = "WITHOUT_TRAFFIC_CONTROL"
     deployment_type   = "IN_PLACE"
   }
+=======
+  deployment_style { deployment_option = "WITHOUT_TRAFFIC_CONTROL" deployment_type = "IN_PLACE" }
+>>>>>>> eca1baaa5cdec3a3cd1a54758194940fdd81d46d
 }
