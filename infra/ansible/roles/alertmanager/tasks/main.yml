@@ -1,0 +1,87 @@
+---
+- name: Ensure alertmanager user
+  user: { name: alertmanager, system: yes, shell: /sbin/nologin }
+
+- name: Create dirs
+  file: { path: "{{ item }}", state: directory, owner: alertmanager, group: alertmanager, mode: '0755' }
+  loop:
+    - /etc/alertmanager
+    - /var/lib/alertmanager
+
+- name: Download Alertmanager
+  get_url:
+    url: https://github.com/prometheus/alertmanager/releases/download/v0.27.0/alertmanager-0.27.0.linux-amd64.tar.gz
+    dest: /tmp/alertmanager.tar.gz
+    mode: '0644'
+
+- name: Extract Alertmanager
+  unarchive:
+    src: /tmp/alertmanager.tar.gz
+    dest: /tmp
+    remote_src: yes
+
+- name: Install binaries
+  copy:
+    src: "/tmp/alertmanager-0.27.0.linux-amd64/{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    mode: '0755'
+    remote_src: yes
+  loop: [ 'alertmanager', 'amtool' ]
+
+- name: Load Slack webhook from SSM if provided
+  set_fact:
+    alertmanager_slack_webhook_url: "{{ lookup('amazon.aws.aws_ssm', alertmanager_slack_webhook_url_ssm_parameter, region=region) }}"
+  when:
+    - alertmanager_slack_webhook_url is not defined or alertmanager_slack_webhook_url | length == 0
+    - alertmanager_slack_webhook_url_ssm_parameter is defined
+    - alertmanager_slack_webhook_url_ssm_parameter | length > 0
+
+- name: Load SMTP secret from Secrets Manager if provided
+  set_fact:
+    _smtp_secret: "{{ lookup('amazon.aws.aws_secret', alertmanager_email_smtp_secret_arn, region=region) | from_json }}"
+  when:
+    - alertmanager_email_smtp_secret_arn is defined
+    - alertmanager_email_smtp_secret_arn | length > 0
+
+- name: Map SMTP secret to variables
+  set_fact:
+    alertmanager_email_smtp_host: "{{ _smtp_secret.host | default(alertmanager_email_smtp_host) }}"
+    alertmanager_email_smtp_port: "{{ _smtp_secret.port | default(alertmanager_email_smtp_port) }}"
+    alertmanager_email_username: "{{ _smtp_secret.username | default(alertmanager_email_username) }}"
+    alertmanager_email_password: "{{ _smtp_secret.password | default(alertmanager_email_password) }}"
+    alertmanager_email_from: "{{ _smtp_secret.from | default(alertmanager_email_from) }}"
+    alertmanager_email_to: "{{ _smtp_secret.to | default(alertmanager_email_to) }}"
+  when: _smtp_secret is defined
+
+- name: Deploy config
+  template: { src: templates/alertmanager.yml.j2, dest: /etc/alertmanager/alertmanager.yml, owner: alertmanager, group: alertmanager, mode: '0644' }
+  register: am_cfg
+
+- name: Systemd unit
+  copy:
+    dest: /etc/systemd/system/alertmanager.service
+    content: |
+      [Unit]
+      Description=Alertmanager
+      After=network.target
+
+      [Service]
+      User=alertmanager
+      Group=alertmanager
+      ExecStart=/usr/local/bin/alertmanager \
+        --config.file=/etc/alertmanager/alertmanager.yml \
+        --storage.path=/var/lib/alertmanager \
+        --web.listen-address=0.0.0.0:9093
+      Restart=on-failure
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Reload systemd and enable service
+  shell: |
+    systemctl daemon-reload
+    systemctl enable --now alertmanager
+
+- name: Restart Alertmanager if config changed
+  service: { name: alertmanager, state: restarted }
+  when: am_cfg is changed

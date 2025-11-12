@@ -1,0 +1,20 @@
+groups:
+  - name: basic_alerts
+    rules:
+      - alert: HighCPUUsage
+        expr: 100 - (avg by (instance_ip) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "CPU > 80% for 5m", description: "Instance {{ $labels.instance_ip }} high CPU" }
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "Memory > 90% for 10m", description: "Instance {{ $labels.instance_ip }} high memory" }
+
+      - alert: LowDiskSpace
+        expr: (1 - (node_filesystem_free_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"})) * 100 > 90
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "Disk > 90% for 10m", description: "Instance {{ $labels.instance_ip }} low disk" }

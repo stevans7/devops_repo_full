@@ -1,0 +1,66 @@
+---
+- name: Ensure prometheus user
+  user: { name: prometheus, system: yes, shell: /sbin/nologin }
+
+- name: Create dirs
+  file: { path: "{{ item }}", state: directory, owner: prometheus, group: prometheus, mode: '0755' }
+  loop:
+    - /etc/prometheus
+    - /etc/prometheus/rules
+    - /var/lib/prometheus
+
+- name: Download Prometheus
+  get_url:
+    url: https://github.com/prometheus/prometheus/releases/download/v2.52.0/prometheus-2.52.0.linux-amd64.tar.gz
+    dest: /tmp/prometheus.tar.gz
+    mode: '0644'
+
+- name: Extract Prometheus
+  unarchive:
+    src: /tmp/prometheus.tar.gz
+    dest: /tmp
+    remote_src: yes
+
+- name: Install binaries
+  copy:
+    src: "/tmp/prometheus-2.52.0.linux-amd64/{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    mode: '0755'
+    remote_src: yes
+  loop: [ 'prometheus', 'promtool' ]
+
+- name: Deploy config
+  template: { src: templates/prometheus.yml.j2, dest: /etc/prometheus/prometheus.yml, owner: prometheus, group: prometheus, mode: '0644' }
+  register: prom_cfg
+
+- name: Deploy rules
+  copy: { src: files/rules/basic.yml, dest: /etc/prometheus/rules/basic.yml, owner: prometheus, group: prometheus, mode: '0644' }
+
+- name: Systemd unit
+  copy:
+    dest: /etc/systemd/system/prometheus.service
+    content: |
+      [Unit]
+      Description=Prometheus Monitoring
+      After=network.target
+
+      [Service]
+      User=prometheus
+      Group=prometheus
+      ExecStart=/usr/local/bin/prometheus \
+        --config.file=/etc/prometheus/prometheus.yml \
+        --storage.tsdb.path=/var/lib/prometheus \
+        --web.listen-address=0.0.0.0:9090
+      Restart=on-failure
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Reload systemd and enable service
+  shell: |
+    systemctl daemon-reload
+    systemctl enable --now prometheus
+
+- name: Restart Prometheus if config changed
+  service: { name: prometheus, state: restarted }
+  when: prom_cfg is changed

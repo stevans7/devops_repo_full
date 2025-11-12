@@ -1,0 +1,5 @@
+image:
+  repository: <account>.dkr.ecr.<region>.amazonaws.com/<project>-backend
+  tag: latest
+service:
+  port: 3000

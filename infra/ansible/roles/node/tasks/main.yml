@@ -1,0 +1,7 @@
+---
+- name: Install docker
+  package: { name: docker, state: present }
+- name: Enable docker
+  service: { name: docker, state: started, enabled: yes }
+ # Le backend est déployé via CodeDeploy (hook restart.sh),
+ # on ne lance pas le conteneur ici pour éviter les conflits de port.

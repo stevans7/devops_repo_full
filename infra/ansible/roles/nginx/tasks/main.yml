@@ -1,0 +1,9 @@
+---
+- name: Install NGINX
+  package: { name: nginx, state: present }
+- name: Deploy config
+  copy: { src: ../../../../frontend/nginx/nginx.conf, dest: /etc/nginx/conf.d/app.conf }
+- name: Create web root
+  file: { path: /var/www/app, state: directory }
+- name: Ensure running
+  service: { name: nginx, state: started, enabled: yes }

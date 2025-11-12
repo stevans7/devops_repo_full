@@ -1,0 +1,19 @@
+---
+region: eu-central-1
+ansible_connection: community.aws.aws_ssm
+ansible_python_interpreter: auto
+project: ""
+
+# Alerting configuration (remplir pour activer)
+alertmanager_slack_webhook_url: ""
+alertmanager_slack_channel: "#alerts"
+alertmanager_email_smtp_host: ""
+alertmanager_email_smtp_port: 587
+alertmanager_email_username: ""
+alertmanager_email_password: ""
+alertmanager_email_from: "alerts@example.com"
+alertmanager_email_to: "you@example.com"
+
+# Optionally fetch from AWS services (controller credentials must permit access)
+alertmanager_slack_webhook_url_ssm_parameter: ""   # e.g., /prod/alerting/slack_webhook
+alertmanager_email_smtp_secret_arn: ""             # e.g., arn:aws:secretsmanager:eu-central-1:...:secret:alertmanager-smtp-xxxxx

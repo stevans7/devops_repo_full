@@ -1,0 +1,13 @@
+---
+- hosts: front
+  become: true
+  roles: [codedeploy-agent, nginx, cwagent, node_exporter]
+- hosts: back
+  become: true
+  roles: [codedeploy-agent, node, cwagent, otel, node_exporter]
+- hosts: db
+  become: true
+  roles: [node_exporter]
+- hosts: monitoring
+  become: true
+  roles: [node_exporter, prometheus, alertmanager, grafana]

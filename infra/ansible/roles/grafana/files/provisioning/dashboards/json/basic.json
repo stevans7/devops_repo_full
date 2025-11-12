@@ -1,0 +1,23 @@
+{
+  "annotations": {"list": []},
+  "panels": [
+    {
+      "type": "graph",
+      "title": "CPU %",
+      "targets": [{"expr": "100 - (avg by (instance_ip) (irate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)", "legendFormat": "{{instance_ip}}"}]
+    },
+    {
+      "type": "graph",
+      "title": "RAM %",
+      "targets": [{"expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100", "legendFormat": "{{instance_ip}}"}]
+    },
+    {
+      "type": "graph",
+      "title": "Disk %",
+      "targets": [{"expr": "(1 - (node_filesystem_free_bytes{fstype!='tmpfs',mountpoint='/'}/node_filesystem_size_bytes{fstype!='tmpfs',mountpoint='/'})) * 100", "legendFormat": "{{instance_ip}}"}]
+    }
+  ],
+  "schemaVersion": 36,
+  "version": 1,
+  "title": "Infra Basic"
+}

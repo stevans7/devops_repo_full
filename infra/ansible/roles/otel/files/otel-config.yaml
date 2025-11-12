@@ -1,0 +1,8 @@
+receivers:
+  otlp:
+    protocols: { http: {}, grpc: {} }
+exporters:
+  awsxray: {}
+service:
+  pipelines:
+    traces: { receivers: [otlp], exporters: [awsxray] }

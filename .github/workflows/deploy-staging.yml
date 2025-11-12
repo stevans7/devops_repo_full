@@ -1,0 +1,39 @@
+name: Deploy Staging
+on:
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Compute backend image ref (staging)
+        id: image
+        run: |
+          IMAGE="${{ secrets.AWS_ACCOUNT }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.STAGING_PROJECT }}-backend:$(git rev-parse --short HEAD)"
+          echo "image=$IMAGE" >> $GITHUB_OUTPUT
+          echo "$IMAGE" > backend/image.txt
+      - name: Backend bundle -> S3 (staging)
+        run: |
+          zip -r backend.zip backend -x "backend/node_modules/*"
+          aws s3 cp backend.zip s3://${{ secrets.STAGING_PROJECT }}-artifacts/backend/${{ github.sha }}.zip
+      - name: CodeDeploy create deployment (staging)
+        run: |
+          aws deploy create-deployment \
+            --application-name "${{ secrets.STAGING_PROJECT }}-backend" \
+            --deployment-group-name "${{ secrets.STAGING_PROJECT }}-backend-dg" \
+            --s3-location bucket=${{ secrets.STAGING_PROJECT }}-artifacts,key=backend/${{ github.sha }}.zip,bundleType=zip
+      - name: Front artefacts -> S3 (staging current)
+        run: aws s3 sync s3://${{ secrets.STAGING_PROJECT }}-artifacts/front/${{ github.sha }}/ s3://${{ secrets.STAGING_PROJECT }}-artifacts/front/current/
+      - name: Refresh front via SSM (staging)
+        run: |
+          CMD=$(aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --comment "Refresh staging frontend from S3" \
+            --targets Key=tag:Project,Values=${{ secrets.STAGING_PROJECT }} Key=tag:Tier,Values=front \
+            --parameters commands='["aws s3 sync s3://${{ secrets.STAGING_PROJECT }}-artifacts/front/current/ /var/www/app/","systemctl reload nginx"]' \
+            --query 'Command.CommandId' --output text)
+          echo "Triggered SSM Command: $CMD"

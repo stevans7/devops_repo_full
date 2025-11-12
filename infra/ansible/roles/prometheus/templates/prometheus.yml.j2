@@ -1,0 +1,30 @@
+global:
+  scrape_interval: 15s
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["localhost:9093"]
+
+scrape_configs:
+  - job_name: 'node'
+    ec2_sd_configs:
+      - region: {{ region | default('eu-central-1') }}
+        port: 9100
+    relabel_configs:
+      - source_labels: [__meta_ec2_tag_Tier]
+        target_label: tier
+      - source_labels: [__meta_ec2_private_ip]
+        target_label: instance_ip
+      - source_labels: [__meta_ec2_tag_Project]
+        target_label: project
+
+  # Uncomment if your app exposes /metrics
+  # - job_name: 'backend-app'
+  #   ec2_sd_configs:
+  #     - region: {{ region | default('eu-central-1') }}
+  #       port: 3000
+  #   metrics_path: /metrics
