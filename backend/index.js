@@ -103,6 +103,8 @@ app.get('/health', async (req, res) => {
   });
 });
 app.get('/healthz', (req, res) => res.send('ok'));
+// Alias for ALB path-based tests hitting /api/healthz
+app.get('/api/healthz', (req, res) => res.send('ok'));
 
 // Metrics endpoint (Prometheus)
 app.get('/metrics', async (req, res) => {
