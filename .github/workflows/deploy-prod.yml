@@ -7,6 +7,11 @@ permissions:
   id-token: write
   contents: read
 
+env:
+  PROJECT: devopsrepo
+  ARTIFACTS_BUCKET: devopsrepo-artifacts
+  AWS_REGION: eu-central-1
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
