@@ -1,1 +1,3 @@
-resource "aws_s3_bucket" "artifacts" { bucket = "${var.project}-artifacts" }
+resource "aws_s3_bucket" "artifacts" {
+  bucket = "${var.project}-artifacts"
+}

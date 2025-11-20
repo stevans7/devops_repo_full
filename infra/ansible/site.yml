@@ -1,13 +1,13 @@
 ---
-- hosts: front
+- hosts: "tag_Tier_front:_front"
   become: true
   roles: [codedeploy-agent, nginx, cwagent, node_exporter]
-- hosts: back
+- hosts: "tag_Tier_back:_back"
   become: true
   roles: [codedeploy-agent, node, cwagent, otel, node_exporter]
-- hosts: db
+- hosts: "tag_Tier_db:_db"
   become: true
   roles: [node_exporter]
-- hosts: monitoring
+- hosts: "tag_Tier_monitoring:_monitoring"
   become: true
   roles: [node_exporter, prometheus, alertmanager, grafana]

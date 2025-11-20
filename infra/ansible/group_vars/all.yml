@@ -1,19 +1,19 @@
 ---
-region: eu-central-1
-ansible_connection: community.aws.aws_ssm
-ansible_python_interpreter: auto
-project: ""
+# Connection via AWS SSM + S3 payload bucket
+ansible_connection: amazon.aws.aws_ssm
+ansible_aws_ssm_bucket_name: "{{ project }}-artifacts"
+ansible_aws_ssm_bucket_prefix: "ansible-ssm"
+ansible_aws_ssm_region: "{{ region | default('eu-central-1') }}"
 
-# Alerting configuration (remplir pour activer)
-alertmanager_slack_webhook_url: ""
-alertmanager_slack_channel: "#alerts"
-alertmanager_email_smtp_host: ""
-alertmanager_email_smtp_port: 587
-alertmanager_email_username: ""
-alertmanager_email_password: ""
-alertmanager_email_from: "alerts@example.com"
-alertmanager_email_to: "you@example.com"
+# Safer privilege escalation over SSM (no TTY/password prompts)
+ansible_become: true
+ansible_become_method: sudo
+ansible_become_flags: "-n -E"
 
-# Optionally fetch from AWS services (controller credentials must permit access)
-alertmanager_slack_webhook_url_ssm_parameter: ""   # e.g., /prod/alerting/slack_webhook
-alertmanager_email_smtp_secret_arn: ""             # e.g., arn:aws:secretsmanager:eu-central-1:...:secret:alertmanager-smtp-xxxxx
+# Stable shell and temp dir to avoid /tmp pressure
+ansible_shell_type: sh
+ansible_shell_executable: /bin/sh
+ansible_remote_tmp: "/var/tmp/ansible-{{ ansible_user | default('ssm-user') }}"
+
+# Allow longer SSM commands
+ansible_command_timeout: 1800

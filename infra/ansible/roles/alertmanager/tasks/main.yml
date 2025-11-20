@@ -7,22 +7,26 @@
   loop:
     - /etc/alertmanager
     - /var/lib/alertmanager
+    - /opt/alertmanager
 
 - name: Download Alertmanager
   get_url:
     url: https://github.com/prometheus/alertmanager/releases/download/v0.27.0/alertmanager-0.27.0.linux-amd64.tar.gz
-    dest: /tmp/alertmanager.tar.gz
+    dest: /var/tmp/alertmanager.tar.gz
     mode: '0644'
 
 - name: Extract Alertmanager
   unarchive:
-    src: /tmp/alertmanager.tar.gz
-    dest: /tmp
+    src: /var/tmp/alertmanager.tar.gz
+    dest: /opt/alertmanager
     remote_src: yes
+    extra_opts:
+      - "--strip-components=1"
+    creates: /opt/alertmanager/alertmanager
 
 - name: Install binaries
   copy:
-    src: "/tmp/alertmanager-0.27.0.linux-amd64/{{ item }}"
+    src: "/opt/alertmanager/{{ item }}"
     dest: "/usr/local/bin/{{ item }}"
     mode: '0755'
     remote_src: yes
@@ -78,10 +82,12 @@
       WantedBy=multi-user.target
 
 - name: Reload systemd and enable service
-  shell: |
-    systemctl daemon-reload
-    systemctl enable --now alertmanager
+  systemd:
+    name: alertmanager
+    state: started
+    enabled: yes
+    daemon_reload: yes
 
 - name: Restart Alertmanager if config changed
   service: { name: alertmanager, state: restarted }
-  when: am_cfg is changed
+  when: am_cfg is defined and (am_cfg.changed | default(false))

@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euxo pipefail
-dnf install -y yum-utils amazon-ssm-agent
+dnf install -y amazon-ssm-agent python3
 cat >/etc/yum.repos.d/mongodb-org-7.0.repo <<'EOF'
 [mongodb-org-7.0]
 name=MongoDB Repository

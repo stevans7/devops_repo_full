@@ -1,11 +1,46 @@
 ---
-- name: Install prerequisites
-  package: { name: ['ruby','wget','curl','awscli'], state: present }
+- name: Install prerequisites (avoid curl conflict on AL2023)
+  package:
+    name:
+      - ruby
+      - wget
+      - awscli
+    state: present
+
 - name: Install CodeDeploy agent
   shell: |
     cd /tmp
     curl -O https://aws-codedeploy-{{ region | default('eu-west-3') }}.s3.{{ region | default('eu-west-3') }}.amazonaws.com/latest/install
     chmod +x ./install
     ./install auto
-- name: Ensure codedeploy-agent
-  service: { name: codedeploy-agent, state: started, enabled: yes }
+
+- name: Ensure codedeploy-agent binary symlink exists
+  shell: |
+    set -e
+    if [ ! -x /usr/bin/codedeploy-agent ] && [ -x /opt/codedeploy-agent/bin/codedeploy-agent ]; then
+      ln -sf /opt/codedeploy-agent/bin/codedeploy-agent /usr/bin/codedeploy-agent
+    fi
+  args: { executable: /bin/sh }
+  changed_when: false
+
+- name: Provide systemd unit for CodeDeploy agent (idempotent)
+  copy:
+    src: codedeploy-agent.service
+    dest: /etc/systemd/system/codedeploy-agent.service
+    mode: '0644'
+    force: yes
+
+- name: Reload systemd units
+  systemd:
+    daemon_reload: yes
+
+- name: Create enable symlink (multi-user.target.wants)
+  file:
+    src: /etc/systemd/system/codedeploy-agent.service
+    dest: /etc/systemd/system/multi-user.target.wants/codedeploy-agent.service
+    state: link
+
+- name: Start codedeploy-agent (systemd)
+  systemd:
+    name: codedeploy-agent
+    state: started

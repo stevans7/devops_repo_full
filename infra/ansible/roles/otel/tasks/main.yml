@@ -1,7 +1,134 @@
 ---
-- name: Install AWS OTel Collector
+- name: Detect architecture for OTel (repo/rpm)
+  set_fact:
+    otel_rpm_arch: "{{ 'arm64' if ansible_architecture in ['aarch64','arm64'] else 'x86_64' }}"
+    otel_repo_arch_primary: "{{ 'arm64' if ansible_architecture in ['aarch64','arm64'] else 'x86_64' }}"
+    otel_repo_arch_alternate: "{{ 'arm64' if ansible_architecture in ['aarch64','arm64'] else 'amd64' }}"
+
+- name: Configure AWS OTel YUM repo (AL2023, primary arch)
+  copy:
+    dest: /etc/yum.repos.d/aws-otel-collector.repo
+    mode: '0644'
+    content: |
+      [aws-otel-collector]
+      name=AWS Distro for OpenTelemetry Collector
+      baseurl=https://aws-observability-downloads.s3.amazonaws.com/aws-otel-collector/amazon_linux/{{ otel_repo_arch_primary }}/latest
+      enabled=1
+      gpgcheck=0
+
+- name: Refresh YUM metadata for OTel repo
+  shell: |
+    dnf -y clean all && dnf -y makecache
+  args: { executable: /bin/sh }
+  changed_when: false
+
+- name: Install AWS OTel Collector from repo (primary)
   package: { name: aws-otel-collector, state: present }
+  register: otel_pkg_primary
+  failed_when: false
+
+- name: Mark OTel installed from primary repo when success
+  set_fact:
+    otel_installed_ok: true
+  when: otel_pkg_primary is not failed
+
+- name: Try alternate repo arch if primary failed (x86_64 vs amd64)
+  when: otel_pkg_primary is failed
+  block:
+    - name: Configure AWS OTel YUM repo (alternate arch)
+      copy:
+        dest: /etc/yum.repos.d/aws-otel-collector.repo
+        mode: '0644'
+        content: |
+          [aws-otel-collector]
+          name=AWS Distro for OpenTelemetry Collector (alt)
+          baseurl=https://aws-observability-downloads.s3.amazonaws.com/aws-otel-collector/amazon_linux/{{ otel_repo_arch_alternate }}/latest
+          enabled=1
+          gpgcheck=0
+
+    - name: Refresh YUM metadata for OTel repo (alternate)
+      shell: dnf -y clean all && dnf -y makecache
+      args: { executable: /bin/sh }
+      changed_when: false
+
+    - name: Install AWS OTel Collector from repo (alternate)
+      package: { name: aws-otel-collector, state: present }
+      register: otel_pkg_alternate
+      failed_when: false
+
+    - name: Mark OTel installed from alternate repo when success
+      set_fact:
+        otel_installed_ok: true
+      when: otel_pkg_alternate is not failed
+
+- name: Fallback — install AWS OTel Collector via RPM download
+  when: not (otel_installed_ok | default(false))
+  block:
+    - name: Download OTel RPM
+      get_url:
+        url: "https://aws-observability-downloads.s3.amazonaws.com/aws-otel-collector/amazon_linux/{{ otel_rpm_arch }}/latest/aws-otel-collector.rpm"
+        dest: /tmp/aws-otel-collector.rpm
+        mode: '0644'
+        force: true
+      register: otel_rpm_fetch
+      failed_when: otel_rpm_fetch is failed
+
+    - name: Check RPM downloaded
+      stat:
+        path: /tmp/aws-otel-collector.rpm
+      register: otel_rpm_stat
+
+    - name: Install OTel RPM if downloaded
+      shell: rpm -Uvh --replacepkgs /tmp/aws-otel-collector.rpm
+      args: { executable: /bin/sh }
+      when: otel_rpm_stat.stat.exists | default(false)
+
+- name: Detect OTel config directory
+  stat:
+    path: /opt/aws/aws-otel-collector/etc
+  register: otel_opt_cfg
+
+- name: Set OTel config dir fact
+  set_fact:
+    otel_config_dir: "{{ otel_opt_cfg.stat.exists | ternary('/opt/aws/aws-otel-collector/etc', '/etc/aws-otel-collector') }}"
+
+- name: Ensure OTel config directory exists when using /etc
+  file:
+    path: "{{ otel_config_dir }}"
+    state: directory
+    mode: '0755'
+  when: otel_config_dir == '/etc/aws-otel-collector'
+
 - name: Deploy config
-  copy: { src: ../../files/otel-config.yaml, dest: /etc/aws-otel-collector/config.yaml }
-- name: Ensure running
-  service: { name: aws-otel-collector, state: started, enabled: yes }
+  copy:
+    src: otel-config.yaml
+    dest: "{{ otel_config_dir }}/config.yaml"
+    mode: '0644'
+
+- name: Detect systemd unit for OTel
+  stat:
+    path: "/etc/systemd/system/aws-otel-collector.service"
+  register: otel_unit_etc
+
+- name: Detect systemd unit for OTel (usr lib)
+  stat:
+    path: "/usr/lib/systemd/system/aws-otel-collector.service"
+  register: otel_unit_usr
+
+- name: Start OTel via systemd when unit present
+  systemd:
+    name: aws-otel-collector
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  when: otel_unit_etc.stat.exists or otel_unit_usr.stat.exists
+
+- name: Detect OTel control script
+  stat:
+    path: /opt/aws/aws-otel-collector/bin/aws-otel-collector-ctl
+  register: otel_ctl
+
+- name: Start OTel via control script (fallback)
+  shell: "/opt/aws/aws-otel-collector/bin/aws-otel-collector-ctl -a start -c {{ otel_config_dir }}/config.yaml"
+  args: { executable: /bin/sh }
+  when: not (otel_unit_etc.stat.exists or otel_unit_usr.stat.exists) and otel_ctl.stat.exists

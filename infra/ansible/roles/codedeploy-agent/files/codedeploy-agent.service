@@ -1,0 +1,14 @@
+[Unit]
+Description=AWS CodeDeploy Host Agent
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Restart=always
+ExecStart=/usr/bin/codedeploy-agent start
+ExecStop=/usr/bin/codedeploy-agent stop
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

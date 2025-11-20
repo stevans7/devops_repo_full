@@ -187,7 +187,7 @@ Debug inventaire:
 ```bash
 ansible-inventory -i inventories/prod/aws_ec2.yml --graph
 ```
-Doit lister les groupes `front`, `back`, `db`, `monitoring`.
+Doit lister des groupes dynamiques basés sur les tags EC2, par ex. `tag_Tier_front`, `tag_Tier_back`, `tag_Tier_db`, `tag_Tier_monitoring` (et parfois leurs alias `_front`, `_back`, etc.). Le playbook cible déjà ces groupes.
 
 ---
 

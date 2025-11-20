@@ -1,2 +1,2 @@
-variable "project"{type=string}
-variable "alb_arn"{type=string}
+variable "project" { type = string }
+variable "alb_arn" { type = string }

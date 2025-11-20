@@ -1,4 +1,9 @@
 ---
+- name: Import Grafana GPG key (idempotent)
+  rpm_key:
+    state: present
+    key: https://packages.grafana.com/gpg.key
+
 - name: Add Grafana repo
   copy:
     dest: /etc/yum.repos.d/grafana.repo
@@ -13,8 +18,13 @@
       sslverify=1
       sslcacert=/etc/pki/tls/certs/ca-bundle.crt
 
-- name: Install Grafana
-  package: { name: grafana, state: present }
+- name: Install Grafana (dnf, async to avoid SSM session timeouts)
+  dnf:
+    name: grafana
+    state: present
+    update_cache: yes
+  async: 1800
+  poll: 10
 
 - name: Configure grafana.ini
   template: { src: templates/grafana.ini.j2, dest: /etc/grafana/grafana.ini }

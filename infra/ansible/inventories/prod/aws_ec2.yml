@@ -1,10 +1,12 @@
-plugin: aws_ec2
+plugin: amazon.aws.aws_ec2
 regions:
   - eu-central-1
 hostnames:
   - instance-id
 compose:
   ansible_host: instance_id
+  ansible_connection: aws_ssm
+  ansible_python_interpreter: /usr/bin/python3
 keyed_groups:
   - prefix: ""
     key: tags.Project
