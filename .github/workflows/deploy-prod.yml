@@ -34,3 +34,6 @@ jobs:
             --parameters commands='["aws s3 sync s3://${{ secrets.PROJECT }}-artifacts/front/current/ /var/www/app/","systemctl reload nginx"]' \
             --query 'Command.CommandId' --output text)
           echo "Triggered SSM Command: $CMD"
+permissions:
+  id-token: write
+  contents: read
