@@ -26,31 +26,31 @@ jobs:
       - name: Compute backend image ref
         id: image
         run: |
-          IMAGE="${{ secrets.AWS_ACCOUNT }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.PROJECT }}-backend:$(git rev-parse --short HEAD)"
+          IMAGE="${{ secrets.AWS_ACCOUNT }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.PROJECT }}-backend:$(git rev-parse --short HEAD)"
           echo "image=$IMAGE" >> $GITHUB_OUTPUT
           echo "$IMAGE" > backend/image.txt
 
       - name: Backend bundle -> S3
         run: |
           zip -r backend.zip backend -x "backend/node_modules/*"
-          aws s3 cp backend.zip s3://${{ secrets.PROJECT }}-artifacts/backend/${{ github.sha }}.zip
+          aws s3 cp backend.zip s3://${{ env.ARTIFACTS_BUCKET }}/backend/${{ github.sha }}.zip
 
       - name: CodeDeploy create deployment
         run: |
           aws deploy create-deployment \
-            --application-name "${{ secrets.PROJECT }}-backend" \
-            --deployment-group-name "${{ secrets.PROJECT }}-backend-dg" \
-            --s3-location bucket=${{ secrets.PROJECT }}-artifacts,key=backend/${{ github.sha }}.zip,bundleType=zip
+            --application-name "${{ env.PROJECT }}-backend" \
+            --deployment-group-name "${{ env.PROJECT }}-backend-dg" \
+            --s3-location bucket=${{ env.ARTIFACTS_BUCKET }},key=backend/${{ github.sha }}.zip,bundleType=zip
 
       - name: Front artefacts -> S3 (current)
-        run: aws s3 sync s3://${{ secrets.PROJECT }}-artifacts/front/${{ github.sha }}/ s3://${{ secrets.PROJECT }}-artifacts/front/current/
+        run: aws s3 sync s3://${{ env.ARTIFACTS_BUCKET }}/front/${{ github.sha }}/ s3://${{ env.ARTIFACTS_BUCKET }}/front/current/
 
       - name: Refresh front via SSM
         run: |
           CMD=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
             --comment "Refresh frontend from S3" \
-            --targets Key=tag:Project,Values=${{ secrets.PROJECT }} Key=tag:Tier,Values=front \
-            --parameters commands='["aws s3 sync s3://${{ secrets.PROJECT }}-artifacts/front/current/ /var/www/app/","systemctl reload nginx"]' \
+            --targets Key=tag:Project,Values=${{ env.PROJECT }} Key=tag:Tier,Values=front \
+            --parameters commands='["aws s3 sync s3://${{ env.ARTIFACTS_BUCKET }}/front/current/ /var/www/app/","systemctl reload nginx"]' \
             --query 'Command.CommandId' --output text)
           echo "Triggered SSM Command: $CMD"
