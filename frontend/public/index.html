@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -59,7 +59,7 @@ https://templatemo.com/tm-595-3d-coverflow
                 <div class="coverflow" id="coverflow">
                     <div class="coverflow-item" data-index="0">
                         <div class="cover image-loading">
-                            <img src="images/mountain-landscape.png" alt="Site E-commerçe" loading="lazy">
+                            <img src="images/mountain-landscape.png" alt="Site E-commerÃ§e" loading="lazy">
                         </div>
                         <div class="reflection"></div>
                     </div>
@@ -131,13 +131,13 @@ https://templatemo.com/tm-595-3d-coverflow
                 
                 <div class="about-info">
                     <h3>Vous souhaitez avoir une application Web et la déployer ?</h3>
-                    <p>XDeV vous accompagne dans la création d’expériences numériques modernes et performantes. Transformez vos idées en applications interactives qui séduisent vos utilisateurs et valorisent votre image.</p>
+                    <p>XDeV vous accompagne dans la création d'expériences numériques modernes et performantes. Transformez vos idées en applications interactives qui séduisent vos utilisateurs et valorisent votre image.</p>
                     <p>Que ce soit pour un site vitrine, une plateforme métier ou un outil sur mesure, XDeV donne vie à vos projets avec des interfaces fluides et intuitives.</p>
                     
                     <ul class="feature-list">
                         <li>Performances optimisées avec les dernières technologies</li>
                         <li>Compatibilité mobile et navigation tactile</li>
-                        <li>Fonctionnalités personnalisables selon vos besoins</li>
+                        <li>FonctionnalitÃ©s personnalisables selon vos besoins</li>
                         <li>Sécurité et maintenance garanties</li>
                         <li>Déploiement rapide sur le cloud</li>
                     </ul>
@@ -177,13 +177,13 @@ https://templatemo.com/tm-595-3d-coverflow
         <div class="contact-content">
             <div class="contact-header">
                 <h2>Nous contacter</h2>
-                <p>Vous avez un projet en tête ? Créons ensemble quelque chose d’exceptionnel.</p>
+                <p>Vous avez un projet en tête ? Créons ensemble quelque chose d'exceptionnel.</p>
             </div>
             
             <div class="contact-container">
                 <div class="contact-info-section">
-                    <h3>Restons connectés</h3>
-                    <p>Nous sommes là pour donner vie à vos idées. Que vous ayez besoin d’une galerie élégante, d’une refonte complète de votre site web ou d’un développement sur mesure, nous serions ravis d’en discuter avec vous.</p>
+                    <h3>Restons connectÃ©s</h3>
+                    <p>Nous sommes là pour donner vie à vos idées. Que vous ayez besoin d'une galerie élégante, d'une refonte complète de votre site web ou d'un développement sur mesure, nous serions ravis d'en discuter avec vous.</p>
                     
                     <div class="contact-details">
                         <div class="contact-item">
@@ -269,11 +269,24 @@ https://templatemo.com/tm-595-3d-coverflow
                         </div>
                         <div class="form-group">
                             <label for="motif">Motif du rendez-vous</label>
-                            <input type="text" id="motif" name="motif" required>
+                            <select id="motif" name="motif" required>
+                                <option value="">-- Sélectionnez un motif --</option>
+                                <option>Création site vitrine</option>
+                                <option>Création site e-commerce</option>
+                                <option>Blog / Média</option>
+                                <option>Portfolio</option>
+                                <option>Application web personnalisée</option>
+                                <option>Landing page</option>
+                                <option>Refonte de site</option>
+                                <option>SEO / Performance</option>
+                                <option>Intégration API</option>
+                                <option>Maintenance / Support</option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label for="date">Date souhaitée</label>
                             <input type="datetime-local" id="date" name="date" required>
+                            <small id="dateHelp" style="display:block;margin-top:6px;opacity:.8">Créneaux autorisés: 09:00 à 17:00, à partir d’aujourd’hui.</small>
                         </div>
                         <button type="submit" class="submit-btn">Prendre rendez-vous</button>
                     </form>
@@ -298,7 +311,7 @@ https://templatemo.com/tm-595-3d-coverflow
 
     <!-- Scroll to top button -->
     <div class="scroll-to-top" id="scrollToTop">
-        <span>↑</span>
+        <span>â†‘</span>
     </div>
 
 <script src="templatemo-3d-coverflow-scripts.js"></script>
@@ -306,8 +319,51 @@ https://templatemo.com/tm-595-3d-coverflow
 </body>
 </html>
 
-<!-- Avant la fermeture de la balise body, ajoutez ce script pour gérer les rendez-vous -->
+<!-- Avant la fermeture de la balise body, ajoutez ce script pour gÃ©rer les rendez-vous -->
 <script>
+// Contraintes date/heure: pas de date antérieure à aujourd'hui, créneaux 09:00 → 17:00
+function formatLocalDateTime(d) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function enforceDateTimeConstraints() {
+  const input = document.getElementById('date');
+  if (!input || !input.value) return;
+  const v = input.value;
+  const [datePart, timePart] = v.split('T');
+  if (!datePart || !timePart) return;
+  const [yy, mm, dd] = datePart.split('-').map((x) => parseInt(x, 10));
+  const [HH, MM] = timePart.split(':').map((x) => parseInt(x, 10));
+  let sel = new Date(yy, (mm || 1) - 1, dd || 1, HH || 0, MM || 0, 0, 0);
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const minToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 0, 0, 0);
+
+  // Pas avant aujourd'hui 09:00
+  if (sel < minToday) sel = minToday;
+
+  // Bornes de la journée sélectionnée
+  const start = new Date(sel.getFullYear(), sel.getMonth(), sel.getDate(), 9, 0, 0, 0);
+  const end = new Date(sel.getFullYear(), sel.getMonth(), sel.getDate(), 17, 0, 0, 0);
+  if (sel < start) sel = start;
+  if (sel > end) sel = end;
+
+  input.value = formatLocalDateTime(sel);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const dateInput = document.getElementById('date');
+  if (dateInput) {
+    const now = new Date();
+    const min = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0, 0);
+    dateInput.min = formatLocalDateTime(min);
+    dateInput.addEventListener('change', enforceDateTimeConstraints);
+    dateInput.addEventListener('blur', enforceDateTimeConstraints);
+  }
+});
+
 function handleAppointmentSubmit(event) {
     event.preventDefault();
     
@@ -316,6 +372,7 @@ function handleAppointmentSubmit(event) {
     const email = document.getElementById('email').value;
     const tel = document.getElementById('tel').value;
     const motif = document.getElementById('motif').value;
+    enforceDateTimeConstraints();
     const date = document.getElementById('date').value;
     
     const messageElement = document.getElementById('appointmentMessage');
