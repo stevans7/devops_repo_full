@@ -146,7 +146,7 @@ app.post('/api/appointment', async (req, res) => {
 
     await transporter.sendMail(mailOptions);
     lastSubmission = now;
-    res.json({ message: 'Rendez-vous enregistré et email envoyé ✅' });
+    res.json({ message: 'Super!! Votre prise de rendez-vous a été enregistré et envoyé à Xdev ✅' });
   } catch (err) {
     console.error('Error:', err);
     res.status(500).json({ error: 'Erreur lors du traitement de la demande' });
