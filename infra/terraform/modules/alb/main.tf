@@ -59,6 +59,9 @@ resource "aws_lb_target_group" "grafana" {
   vpc_id   = var.vpc_id
   health_check {
     path = "/login"
+    matcher {
+      http_code = "200-399"
+    }
   }
 }
 resource "aws_lb_listener" "http_redirect" {
